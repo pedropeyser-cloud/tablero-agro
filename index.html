@@ -252,6 +252,7 @@ input[type=range]{width:100%;accent-color:var(--verde);height:28px;cursor:pointe
 .resp .tag{font-size:12px;color:var(--trigo);font-weight:600;margin-bottom:6px;display:block}
 .resp ul{margin-bottom:12px}
 .resp .prueba{font-size:13px;background:var(--papel2);border-radius:9px;padding:10px 12px;color:var(--tinta2);margin-top:auto}
+.eje{display:flex;flex-direction:column}.eje .tag{font-size:12px;color:var(--trigo);font-weight:600;margin-bottom:6px}.eje h3{margin-bottom:12px}.eje .prueba{font-size:13px;background:var(--papel2);border-radius:9px;padding:10px 12px;color:var(--tinta2);margin-top:auto}.eje ul{margin-bottom:12px}
 .tiempo .tarjeta{border-top:4px solid var(--verde)}
 .tiempo .tarjeta:nth-child(2){border-top-color:var(--trigo)}
 .tiempo .tarjeta:nth-child(3){border-top-color:var(--azul)}
@@ -379,7 +380,7 @@ input[type=range]{width:100%;accent-color:var(--verde);height:28px;cursor:pointe
     <ol class="agenda">
       <li class="r"><span class="n">01</span><div><b>Lo que entendí de su trabajo</b><span>Su método y dónde se van las horas</span></div></li>
       <li class="r"><span class="n">02</span><div><b>Demo: un mes de Los Talas</b><span>De los mensajes sueltos al informe para el productor</span></div></li>
-      <li class="r"><span class="n">03</span><div><b>Qué gana Cencerro</b><span>Horas, consistencia y un plan de 90 días</span></div></li>
+      <li class="r"><span class="n">03</span><div><b>Qué gana Cencerro</b><span>Horas, los tres ejes del puesto y un plan de 90 días</span></div></li>
       <li class="r"><span class="n">04</span><div><b>Quién soy</b><span>Lo que sé, lo que no y por qué ustedes</span></div></li>
     </ol>
   </div></div>
@@ -590,17 +591,14 @@ input[type=range]{width:100%;accent-color:var(--verde);height:28px;cursor:pointe
   </div></div>
 </section>
 
-<section class="diap" data-cap="3" data-titulo="Además de las horas">
+<section class="diap" data-cap="3" data-titulo="Los tres ejes del puesto">
   <div class="cont">
     <p class="etiq r"><span class="num">3.2</span> Además de las horas</p>
-    <h2 class="r">Lo que cambia para el equipo y para el negocio.</h2>
-    <div class="grilla3" style="margin-top:26px">
-      <div class="tarjeta r"><h3>El mismo informe, analista por analista</h3><p>Reglas compartidas para ordenar los datos: el cliente recibe la misma calidad, lo atienda quien lo atienda.</p></div>
-      <div class="tarjeta r"><h3>Los problemas, antes de la reunión</h3><p>Remitos que no cierran, duplicados, desvíos contra el presupuesto: aparecen solos y con contexto.</p></div>
-      <div class="tarjeta r"><h3>Datos listos para el informe anual</h3><p>Si los datos de cada cliente ya llegan ordenados, comparar márgenes para su Informe de Rentabilidad cuesta menos.</p></div>
-      <div class="tarjeta r"><h3>Analistas nuevos que arrancan antes</h3><p>Reglas escritas y herramientas acortan la inducción de quien se suma a un equipo que crece.</p></div>
-      <div class="tarjeta r"><h3>Gestión interna ordenada</h3><p>Solicitudes, licencias, registros y métricas del equipo remoto en un solo lugar.</p></div>
-      <div class="tarjeta r"><h3>Más tiempo con el productor</h3><p>Lo que valora el cliente es la conversación y las decisiones. Ahí va el tiempo que se libera.</p></div>
+    <h2 class="r">Los tres ejes que plantean para el puesto.</h2>
+    <div class="grilla3 ejes" style="margin-top:26px">
+      <div class="tarjeta eje r"><span class="tag">Eje 1</span><h3>Experiencia y entrega a los clientes</h3><ul class="lista"><li>El mismo informe, lo atienda el analista que lo atienda: las reglas para ordenar son compartidas.</li><li>Los problemas aparecen antes de la reunión, con contexto.</li><li>Datos ya ordenados para comparar márgenes en su Informe de Rentabilidad.</li></ul><p class="prueba"><b>Ya hice:</b> esta demo, y un lector de planillas que marca las dudas en vez de adivinar.</p></div>
+      <div class="tarjeta eje r"><span class="tag">Eje 2</span><h3>Optimización de la gestión interna</h3><ul class="lista"><li>Analistas nuevos que arrancan antes, con reglas escritas y herramientas.</li><li>Solicitudes, licencias, registros y métricas del equipo remoto en un solo lugar.</li><li>Canales de comunicación interna ordenados por tema.</li></ul><p class="prueba"><b>Ya hice:</b> prototipos de sistemas de RR.HH. (licencias, legajos, autogestión). Soy licenciado en el tema.</p></div>
+      <div class="tarjeta eje r"><span class="tag">Eje 3</span><h3>Eficiencia del área comercial</h3><ul class="lista"><li>Juntar en un tablero los contactos que llegan por la web, los webinars y la descarga del informe, con su etapa.</li><li>Que cada productor interesado reciba una comparación contra la media de su zona, armada sola.</li><li>Seguimiento sin que se pierda ninguno.</li></ul><p class="prueba"><b>Ya hice:</b> prospección en frío sobre una base filtrada por análisis de mercado, y un sistema que sigue candidatos por etapas.</p></div>
     </div>
   </div>
 </section>
