@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Tablero del mes · demo</title>
+<meta name="description" content="Prototipo de Pedro Peyser: de la planilla desordenada de un campo al tablero de gestión mensual, con IA y revisión humana.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --papel:#f5f1e6; --papel2:#ebe5d4; --tarjeta:#fffdf7; --tinta:#1f2a1f; --tinta2:#4d574a; --tenue:#7d8577;
+  --verde:#2f5d3a; --verde2:#dfe9da; --trigo:#c08a2e; --trigo2:#f3e3c0; --rojo:#a8432f; --rojo2:#f4ddd5;
+  --linea:#d9d1bd; --azul:#3f6475;
+  --serif:"Fraunces",Georgia,serif; --sans:"Instrument Sans",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--papel);color:var(--tinta);font-family:var(--sans);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+a{color:var(--verde)}
+.app{display:grid;grid-template-columns:260px minmax(0,1fr);height:100vh;width:100vw}
+/* riel */
+.riel{background:var(--tinta);color:#e9e5d6;display:flex;flex-direction:column;padding:28px 22px;gap:26px;overflow-y:auto}
+.marca{font-family:var(--serif);font-size:22px;line-height:1.15;font-weight:600}
+.marca small{display:block;font-family:var(--sans);font-size:12px;font-weight:400;color:#a9ae9c;margin-top:6px;line-height:1.4}
+.pasos{list-style:none;display:flex;flex-direction:column;gap:4px;counter-reset:p}
+.pasos button{width:100%;text-align:left;padding:10px 12px;border-radius:8px;display:flex;gap:12px;align-items:baseline;color:#c9cbbd;transition:background .15s,color .15s}
+.pasos button:hover{background:#2c382c;color:#fff}
+.pasos button[aria-current="step"]{background:#e9e5d6;color:var(--tinta)}
+.pasos .n{font-family:var(--mono);font-size:12px;opacity:.7;min-width:18px}
+.riel .pie{margin-top:auto;font-size:12px;color:#a9ae9c;line-height:1.5}
+.riel .pie a{color:#e9e5d6}
+.btn-pc{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:#c9cbbd;border:1px solid #3a473a;border-radius:6px;padding:6px 10px;margin-top:10px}
+.btn-pc:hover{color:#fff;border-color:#6b776b}
+/* escenario */
+.escena{overflow-y:auto;overflow-x:hidden;position:relative;min-width:0}
+.pantalla{display:none;min-height:100%;padding:40px 56px 48px;max-width:1720px;margin:0 auto}
+.pantalla.activa{display:block;animation:entra .35s ease}
+@keyframes entra{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(34px,4.2vw,58px);line-height:1.04;letter-spacing:-.01em;max-width:16ch}
+h2{font-family:var(--serif);font-weight:600;font-size:clamp(26px,2.4vw,34px);line-height:1.1;margin-bottom:8px}
+h3{font-family:var(--serif);font-weight:600;font-size:18px;margin-bottom:6px}
+.bajada{color:var(--tinta2);max-width:70ch;font-size:16px}
+.cab{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:22px;flex-wrap:wrap}
+.cab>div:first-child{flex:1 1 420px;min-width:0}.cab>button,.cab>div+div{flex:none}
+.accion{background:var(--verde);color:#fff;padding:12px 20px;border-radius:8px;font-weight:600;display:inline-flex;gap:10px;align-items:center;transition:transform .1s,background .15s}
+.accion:hover{background:#264d30}.accion:active{transform:scale(.98)}
+.accion.sec{background:transparent;color:var(--verde);border:1.5px solid var(--verde)}
+.accion:disabled{opacity:.5;cursor:default}
+:focus-visible{outline:2.5px solid var(--trigo);outline-offset:2px}
+.nota{font-size:13px;color:var(--tenue)}
+.tarjeta{background:var(--tarjeta);border:1px solid var(--linea);border-radius:12px;padding:20px}
+/* inicio */
+.inicio{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;min-height:calc(100vh - 88px)}
+.inicio .lead{font-size:18px;color:var(--tinta2);margin:22px 0 28px;max-width:52ch}
+.tres{display:grid;gap:14px}
+.tres .tarjeta{display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:start}
+.tres .num{font-family:var(--serif);font-size:30px;color:var(--trigo);line-height:1}
+.tres p{color:var(--tinta2);font-size:14px}
+.sello{display:inline-block;font-size:12px;letter-spacing:.02em;color:var(--verde);background:var(--verde2);padding:5px 10px;border-radius:99px;margin-bottom:18px}
+/* tablas */
+.tabla-env{overflow:auto;border:1px solid var(--linea);border-radius:12px;background:var(--tarjeta)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{position:sticky;top:0;background:var(--papel2);text-align:left;font-weight:600;font-size:12px;color:var(--tinta2);padding:10px 12px;border-bottom:1px solid var(--linea);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid #ece6d6;vertical-align:top}
+tr:last-child td{border-bottom:0}
+.crudo td{font-family:"Courier New",monospace;font-size:13px;color:#3b3a33}
+.crudo td.n{color:var(--tenue)}
+.problema{display:inline-block;font-family:var(--sans);font-size:11.5px;background:var(--rojo2);color:var(--rojo);padding:2px 8px;border-radius:99px;margin:2px 4px 0 0;white-space:nowrap}
+.mono{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+.der{text-align:right}
+.chip{display:inline-block;font-size:11.5px;padding:2px 8px;border-radius:99px;white-space:nowrap;font-weight:500}
+.u-agri{background:var(--trigo2);color:#7a5413}.u-cria{background:#e2e7ea;color:var(--azul)}.u-tambo{background:var(--verde2);color:var(--verde)}.u-rep{background:#ece6d6;color:var(--tinta2)}.u-duda{background:var(--rojo2);color:var(--rojo)}.u-fuera{background:#eee;color:#888;text-decoration:line-through}
+.dos{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start}
+.lado{display:flex;flex-direction:column;gap:14px;position:sticky;top:0}
+.contador{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.contador div{background:var(--tarjeta);border:1px solid var(--linea);border-radius:10px;padding:12px}
+.contador b{display:block;font-family:var(--serif);font-size:26px;line-height:1}
+.contador span{font-size:12px;color:var(--tenue)}
+.fila-nueva{animation:resalta 1.2s ease}
+@keyframes resalta{from{background:#fbf0d4}to{background:transparent}}
+.duda{border-left:3px solid var(--rojo);padding-left:12px}
+.opciones{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.opciones button{border:1.5px solid var(--linea);border-radius:8px;padding:7px 12px;font-size:13px;background:var(--tarjeta)}
+.opciones button[aria-pressed="true"]{border-color:var(--verde);background:var(--verde2);color:var(--verde);font-weight:600}
+.lista-reglas{list-style:none;font-size:13px;color:var(--tinta2);display:flex;flex-direction:column;gap:8px}
+.lista-reglas li{display:grid;grid-template-columns:18px 1fr;gap:6px}
+.lista-reglas li::before{content:"→";color:var(--trigo)}
+/* tablero */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.kpi{background:var(--tarjeta);border:1px solid var(--linea);border-radius:12px;padding:16px 18px}
+.kpi .et{font-size:12.5px;color:var(--tinta2);display:flex;align-items:center;gap:8px}
+.kpi .v{font-family:var(--serif);font-size:30px;line-height:1.1;margin:6px 0 4px;font-variant-numeric:tabular-nums}
+.kpi .d{font-size:12.5px}
+.pos{color:var(--verde)}.neg{color:var(--rojo)}
+.punto{width:9px;height:9px;border-radius:50%;display:inline-block}
+.grilla{display:grid;grid-template-columns:1.25fr 1fr;gap:16px}
+.grilla .ancha{grid-column:1/-1}
+.barras{display:flex;flex-direction:column;gap:16px;margin-top:10px}
+.barra-f{display:grid;grid-template-columns:96px 1fr 120px;gap:12px;align-items:center;font-size:13px}
+.pista{position:relative;height:26px;background:var(--papel2);border-radius:6px}
+.pista .real{position:absolute;left:0;top:0;bottom:0;border-radius:6px;transition:width .5s ease}
+.pista .meta{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--tinta)}
+.pista .meta::after{content:"";position:absolute;top:-3px;left:-3px;width:8px;height:3px;background:var(--tinta)}
+.leyenda{display:flex;gap:16px;font-size:12px;color:var(--tenue);margin-top:12px;flex-wrap:wrap}
+.alertas{list-style:none;display:flex;flex-direction:column;gap:10px}
+.alertas li{display:grid;grid-template-columns:22px 1fr;gap:8px;font-size:13.5px}
+.alertas .ic{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:12px;font-weight:700}
+.ic.r{background:var(--rojo2);color:var(--rojo)}.ic.a{background:var(--trigo2);color:#7a5413}.ic.v{background:var(--verde2);color:var(--verde)}
+.alertas small{display:block;color:var(--tenue);font-size:12.5px}
+.borrador{font-family:var(--serif);font-size:16px;line-height:1.6;color:var(--tinta);white-space:pre-line}
+.borrador-cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap}
+svg text{font-family:var(--mono);font-size:11px;fill:var(--tenue)}
+/* plan */
+.plan{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.plan .tarjeta{display:flex;flex-direction:column;gap:10px}
+.plan .tag{font-size:12px;color:var(--trigo);font-weight:600}
+.plan ul{padding-left:18px;color:var(--tinta2);font-size:14px;display:flex;flex-direction:column;gap:5px}
+.plan .prueba{font-size:13px;background:var(--papel2);border-radius:8px;padding:10px 12px;color:var(--tinta2);margin-top:auto}
+.tiempos{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px}
+.tiempos .tarjeta{border-top:4px solid var(--verde)}
+.tiempos .tarjeta:nth-child(2){border-top-color:var(--trigo)}
+.tiempos .tarjeta:nth-child(3){border-top-color:var(--azul)}
+.tiempos p{font-size:14px;color:var(--tinta2)}
+/* yo */
+.yo{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.yo ul{padding-left:18px;color:var(--tinta2);display:flex;flex-direction:column;gap:6px;font-size:14.5px}
+.honesto{background:var(--trigo2);border-radius:12px;padding:18px 20px;font-size:14.5px;color:#4a3a17}
+.pie-nav{display:flex;justify-content:space-between;margin-top:28px;gap:12px}
+.oculto{display:none!important}
+@media (max-width:1180px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .dos{grid-template-columns:1fr}.lado{position:static}
+}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);height:100dvh}
+  .riel{padding:14px 16px;gap:10px;flex-direction:row;flex-wrap:wrap;align-items:center;overflow:visible}
+  .marca{font-size:17px}.marca small,.riel .pie{display:none}
+  .pasos{flex-direction:row;overflow-x:auto;width:100%;gap:4px;scrollbar-width:none}
+  .pasos button{white-space:nowrap;padding:8px 10px;font-size:13px}
+  .pantalla{padding:24px 16px 32px}
+  .inicio,.grilla,.plan,.tiempos,.yo{grid-template-columns:1fr}
+  .inicio{min-height:auto;gap:28px}
+  .barra-f{grid-template-columns:72px 1fr 92px}
+  .contador b{font-size:22px}
+  .kpi{padding:12px 14px}.kpi .v{font-size:23px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="riel" aria-label="Pasos de la demo">
+    <div class="marca">El tablero del mes<small>Prototipo de Pedro Peyser para la búsqueda de Analista de IA de Grupo Cencerro · noviembre 2026</small></div>
+    <ol class="pasos" id="pasos"></ol>
+    <div class="pie">Campo, personas y números <b>inventados</b> para la demo.<br>Funciona sin conexión y sin cuentas.<br><button class="btn-pc" id="btnPC" type="button">⛶ Pantalla completa</button></div>
+  </nav>
+
+  <main class="escena" id="escena">
+
+    <!-- 0 · INICIO -->
+    <section class="pantalla" data-paso="0" data-titulo="Inicio">
+      <div class="inicio">
+        <div>
+          <span class="sello">Demo hecha para este puesto</span>
+          <h1>Del cuaderno de remitos al tablero del mes</h1>
+          <p class="lead">Un campo mixto de ejemplo manda sus movimientos de octubre como llegan: renglones sueltos, unidades mezcladas, un remito repetido. La IA los ordena, la persona resuelve lo dudoso y sale el tablero para la reunión mensual con el productor.</p>
+          <button class="accion" data-ir="1" type="button">Ver la planilla como llega →</button>
+        </div>
+        <div class="tres">
+          <div class="tarjeta"><span class="num">1</span><div><h3>La planilla real</h3><p>Catorce renglones de octubre de "Los Talas", un campo inventado con agricultura, cría y tambo.</p></div></div>
+          <div class="tarjeta"><span class="num">2</span><div><h3>Ordenar con IA, decidir con criterio</h3><p>Fechas, unidades y unidad de negocio se normalizan solas. Lo ambiguo queda marcado para que lo resuelva alguien del equipo.</p></div></div>
+          <div class="tarjeta"><span class="num">3</span><div><h3>El tablero y el borrador</h3><p>Margen bruto por unidad contra presupuesto, alertas, flujo de caja y un borrador del informe para la reunión.</p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 1 · PLANILLA -->
+    <section class="pantalla" data-paso="1" data-titulo="La planilla">
+      <div class="cab">
+        <div><h2>Así llegan los datos</h2><p class="bajada">Mezcla de WhatsApp, cuaderno y Excel. Cada renglón tiene algo que impide sumarlo tal cual. Marqué los problemas que hay que resolver antes de mostrar un solo número.</p></div>
+        <button class="accion" data-ir="2" type="button">Ordenar con IA →</button>
+      </div>
+      <div class="tabla-env"><table class="crudo"><thead><tr><th>#</th><th>Lo que mandó el campo</th><th>Qué impide usarlo</th></tr></thead><tbody id="tCruda"></tbody></table></div>
+    </section>
+
+    <!-- 2 · ORDENAR -->
+    <section class="pantalla" data-paso="2" data-titulo="Ordenar">
+      <div class="cab">
+        <div><h2>La IA ordena, el equipo decide</h2><p class="bajada">Cada renglón sale con fecha, concepto, unidad de negocio, cantidad en una sola unidad e importe en dólares. Lo que no se puede asegurar no se adivina: queda como duda.</p></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="accion sec" id="btnProcesar" type="button">▶ Procesar de nuevo</button><button class="accion" data-ir="3" type="button" id="btnATablero">Ver el tablero →</button></div>
+      </div>
+      <div class="dos">
+        <div class="tabla-env"><table><thead><tr><th>#</th><th>Fecha</th><th>Concepto</th><th>Unidad</th><th class="der">Cantidad</th><th class="der">USD</th><th>Nota</th></tr></thead><tbody id="tLimpia"></tbody></table></div>
+        <aside class="lado">
+          <div class="contador"><div><b id="cOk">0</b><span>listos</span></div><div><b id="cAj">0</b><span>con ajuste</span></div><div><b id="cDu">0</b><span>dudas</span></div></div>
+          <div class="tarjeta duda" id="cajaDuda">
+            <h3>Una duda para vos</h3>
+            <p class="nota" style="color:var(--tinta2)">"Honorarios veterinario · Dr. Sosa · USD 600". El campo tiene cría y tambo. ¿A qué unidad va?</p>
+            <div class="opciones" id="opVet">
+              <button type="button" data-v="cria" aria-pressed="false">Cría</button>
+              <button type="button" data-v="tambo" aria-pressed="false">Tambo</button>
+              <button type="button" data-v="mitad" aria-pressed="false">Mitad y mitad</button>
+            </div>
+            <p class="nota" style="margin-top:10px" id="vetNota">Hasta que lo resuelvas, el tablero lo muestra aparte.</p>
+          </div>
+          <div class="tarjeta">
+            <h3>Reglas que usó</h3>
+            <ul class="lista-reglas">
+              <li>Quintales a toneladas (1 qq = 100 kg) y soja a precio de pizarra del día.</li>
+              <li>Remito con el mismo número y la misma fecha: se cuenta una vez.</li>
+              <li>Gasoil sin destino: se reparte 60 / 20 / 20 según el uso histórico del campo.</li>
+              <li>Insumo aplicado contra insumo remitido: si no cierra, alerta de stock.</li>
+            </ul>
+          </div>
+          <p class="nota">En esta demo la clasificación viene precalculada para que la página funcione sin conexión. En uso real la haría un modelo de lenguaje con estas reglas, midiendo aciertos contra casos revisados antes de usarlo con clientes.</p>
+        </aside>
+      </div>
+    </section>
+
+    <!-- 3 · TABLERO -->
+    <section class="pantalla" data-paso="3" data-titulo="Tablero">
+      <div class="cab">
+        <div><h2>Los Talas · octubre 2026</h2><p class="bajada">Margen bruto por unidad de negocio contra presupuesto. Si cambiás la respuesta de la duda, los números se recalculan.</p></div>
+        <button class="accion" data-ir="4" type="button">Cómo lo llevaría a Cencerro →</button>
+      </div>
+      <div class="kpis" id="kpis"></div>
+      <div class="grilla">
+        <div class="tarjeta">
+          <h3>Margen bruto: real contra presupuesto</h3>
+          <div class="barras" id="barras"></div>
+          <div class="leyenda"><span><span class="punto" style="background:var(--verde)"></span> Real del mes</span><span>▮ Presupuesto</span></div>
+        </div>
+        <div class="tarjeta">
+          <h3>Para mirar antes de la reunión</h3>
+          <ul class="alertas" id="alertas"></ul>
+        </div>
+        <div class="tarjeta">
+          <h3>Flujo de caja proyectado</h3>
+          <p class="nota">Saldo a fin de cada mes, en miles de USD.</p>
+          <div id="flujo"></div>
+        </div>
+        <div class="tarjeta">
+          <div class="borrador-cab"><h3 style="margin:0">Borrador para el productor</h3><button class="accion sec" id="btnCopiar" type="button" style="padding:7px 12px;font-size:13px">Copiar</button></div>
+          <p class="borrador" id="borrador"></p>
+          <p class="nota" style="margin-top:10px">Se escribe solo a partir de los números de arriba. El analista lo revisa y lo ajusta antes de mandarlo.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 · PLAN -->
+    <section class="pantalla" data-paso="4" data-titulo="En Cencerro">
+      <div class="cab"><div><h2>Cómo lo llevaría a Cencerro</h2><p class="bajada">Las cuatro responsabilidades del aviso, con lo primero que haría en cada una y lo que ya hice parecido. La medida de fondo: cuántas de las 15 horas mensuales por cliente se van en cargar y ordenar datos, y cuántas quedan para analizar con el productor.</p></div></div>
+      <div class="plan">
+        <div class="tarjeta"><span class="tag">Desarrollo y soporte digital</span><h3>Un tablero por cliente que se arma solo</h3><ul><li>Partir de los informes que el equipo ya presenta cada mes y llevarlos a una página por cliente.</li><li>Que el borrador del informe salga de los números y el analista solo lo revise.</li></ul><p class="prueba"><b>Ya hice:</b> paneles de indicadores con base de datos (novedades de liquidación, reclutamiento) y esta demo.</p></div>
+        <div class="tarjeta"><span class="tag">Implementación y monitoreo de IA</span><h3>Un caso chico, medido, antes de escalar</h3><ul><li>Elegir un proceso concreto, por ejemplo leer remitos y facturas que llegan por foto.</li><li>Armar un set de casos revisados y medir aciertos antes y después de cada cambio; registrar errores e incidencias.</li></ul><p class="prueba"><b>Ya hice:</b> práctica de RAG y evaluación: el mismo set de preguntas a Claude (12/12) y a un modelo local (10/12), y por qué falló.</p></div>
+        <div class="tarjeta"><span class="tag">Automatización de procesos operativos</span><h3>La carga y la conciliación primero</h3><ul><li>Remitos contra órdenes de trabajo, stock de insumos y gasoil: el ejemplo que ustedes mismos usan para explicar por qué hay que ordenar antes de implementar un sistema.</li><li>Plantillas de lectura por cliente, para no rehacer el trabajo cada mes.</li></ul><p class="prueba"><b>Ya hice:</b> lector de Excel con formatos distintos por empresa, y en Temuco controlé remitos contra pedidos y stock físico contra sistema.</p></div>
+        <div class="tarjeta"><span class="tag">Gestión interna</span><h3>RR.HH. digital para un equipo remoto que crece</h3><ul><li>Inducción de analistas nuevos con materiales y seguimiento.</li><li>Solicitudes, licencias, registros y métricas de gestión en un solo lugar.</li></ul><p class="prueba"><b>Ya hice:</b> soy Lic. en Gestión de RR.HH., hice selección dos años y armé prototipos de sistemas de RR.HH. (novedades, licencias, legajos, autogestión).</p></div>
+      </div>
+      <div class="tiempos">
+        <div class="tarjeta"><h3>Primer mes</h3><p>Escuchar al equipo y a dos o tres clientes, relevar cómo llegan los datos y elegir un proceso para empezar.</p></div>
+        <div class="tarjeta"><h3>Segundo mes</h3><p>Primer prototipo con un cliente real, con el analista a cargo al lado. Medir horas y errores contra el método actual.</p></div>
+        <div class="tarjeta"><h3>Tercer mes</h3><p>Si los números dan, documentarlo, enseñárselo al equipo y pasar al siguiente proceso.</p></div>
+      </div>
+      <div class="pie-nav"><button class="accion sec" data-ir="3" type="button">← Tablero</button><button class="accion" data-ir="5" type="button">Quién soy →</button></div>
+    </section>
+
+    <!-- 5 · YO -->
+    <section class="pantalla" data-paso="5" data-titulo="Quién soy">
+      <div class="cab"><div><h2>Pedro Peyser</h2><p class="bajada">Córdoba, 28 años. Licenciado en Gestión de Recursos Humanos. Vengo de la operación y desde este año construyo herramientas con IA.</p></div></div>
+      <div class="yo">
+        <div class="tarjeta"><h3>Lo que traigo</h3><ul>
+          <li>Operación de una PyME: stock, remitos contra pedidos, facturación y 250 a 300 ventas mensuales; un equipo de 7.</li>
+          <li>Prototipos que funcionan, hechos con Claude Code: lectura de planillas desordenadas, paneles con base de datos, rentabilidad por venta y un sitio de juegos en línea con cuentas y partidas en tiempo real (<a href="https://pedropeyser-cloud.github.io/azar/" target="_blank" rel="noopener">AZAR</a>).</li>
+          <li>Dos años de selección y una práctica de capacitación propia: sé relevar lo que la gente necesita y enseñar a usar algo nuevo.</li>
+          <li>Inglés C1.</li>
+        </ul></div>
+        <div style="display:flex;flex-direction:column;gap:20px">
+          <div class="honesto"><b>Lo que todavía no tengo:</b> experiencia en el agro. No vengo del campo. Lo que sí conozco es el problema que ustedes resuelven: información desordenada que no deja decidir. Esta demo es mi forma de empezar a aprender el sector, y los informes y casos que publican son el material con el que seguiría.</div>
+          <div class="tarjeta"><h3>Contacto</h3><p style="color:var(--tinta2)">Me postulé por el formulario con el CV. También estoy en <a href="https://www.linkedin.com/in/pedro-peyser-b93a17141" target="_blank" rel="noopener">LinkedIn</a>.</p></div>
+        </div>
+      </div>
+      <div class="pie-nav"><button class="accion sec" data-ir="4" type="button">← En Cencerro</button><button class="accion sec" data-ir="0" type="button">Volver al inicio</button></div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+"use strict";
+const PIZARRA_SOJA = 295; // USD/tn, inventado para la demo
+// Renglones crudos y su versión ordenada (precalculada).
+// estado: ok | ajuste | duda | fuera
+const DATOS = [
+  {cruda:"12/10 remito 0001-4521 Agroservicios Sur glifosato 40 lts", prob:["sin precio"],
+   f:"12-10", c:"Glifosato · remito 0001-4521", u:"agri", q:"40 L", usd:168, e:"ajuste", nota:"Precio de la lista del proveedor"},
+  {cruda:"13-oct OT 18 aplicacion lote 4 glifo 3 lt/ha 15 ha", prob:["dosis por hectárea","¿alcanza el stock?"],
+   f:"13-10", c:"Aplicación glifosato · lote 4 · OT 18", u:"agri", q:"45 L", usd:0, e:"ajuste", nota:"3 L × 15 ha = 45 L aplicados; se remitieron 40", alerta:true},
+  {cruda:"Venta soja 1ra 30 tn acopio LCV", prob:["sin precio"],
+   f:"15-10", c:"Venta soja de primera", u:"agri", q:"30 tn", usd:30*PIZARRA_SOJA, e:"ajuste", nota:"Pizarra USD 295/tn"},
+  {cruda:"leche oct 61.200 lts liq 0,36", prob:["¿moneda?"],
+   f:"31-10", c:"Leche remitida octubre", u:"tambo", q:"61.200 L", usd:22032, e:"ok", nota:""},
+  {cruda:"gasoil 800 L YPF", prob:["¿qué unidad?","sin fecha"],
+   f:"18-10", c:"Gasoil", u:"rep", q:"800 L", usd:840, e:"ajuste", nota:"Repartido 60 / 20 / 20"},
+  {cruda:"vacunas aftosa 320 dosis campaña", prob:["sin precio"],
+   f:"20-10", c:"Vacuna aftosa, campaña de otoño", u:"cria", q:"320 dosis", usd:352, e:"ajuste", nota:"Precio de lista"},
+  {cruda:"tambero 4% leche oct", prob:["porcentaje, no monto"],
+   f:"31-10", c:"Tambero mediero 4 %", u:"tambo", q:"4 %", usd:Math.round(22032*0.04), e:"ajuste", nota:"Sale del renglón de la leche"},
+  {cruda:"Terneros 45 cab 180kg remate Feria Rural 2,6 u$s", prob:["kg por cabeza"],
+   f:"22-10", c:"Venta terneros en remate", u:"cria", q:"45 cab · 8.100 kg", usd:21060, e:"ok", nota:""},
+  {cruda:"semilla maiz 12 bolsas", prob:["sin precio","sin fecha"],
+   f:"25-10", c:"Semilla de maíz", u:"agri", q:"12 bolsas", usd:2520, e:"ajuste", nota:"USD 210 por bolsa"},
+  {cruda:"flete soja 30tn 14 u$s/tn", prob:[],
+   f:"15-10", c:"Flete soja a acopio", u:"agri", q:"30 tn", usd:420, e:"ok", nota:""},
+  {cruda:"12/10 remito 0001-4521 glifosato 40 lts", prob:["¿repetido?"],
+   f:"12-10", c:"Glifosato · remito 0001-4521", u:"fuera", q:"40 L", usd:0, e:"ajuste", nota:"Duplicado: se cuenta una vez"},
+  {cruda:"balanceado vacas 8 tn", prob:["sin precio"],
+   f:"28-10", c:"Balanceado vacas en ordeñe", u:"tambo", q:"8 tn", usd:2480, e:"ajuste", nota:"USD 310/tn"},
+  {cruda:"arrendamiento 2a cuota 120 qq soja", prob:["en quintales"],
+   f:"30-10", c:"Arrendamiento, 2.ª cuota", u:"agri", q:"12 tn soja", usd:12*PIZARRA_SOJA, e:"ajuste", nota:"120 qq = 12 tn × pizarra"},
+  {cruda:"honorarios veterinario dr sosa 600", prob:["¿cría o tambo?"],
+   f:"29-10", c:"Honorarios veterinario", u:"duda", q:"—", usd:600, e:"duda", nota:"Lo decide el analista", vet:true},
+];
+const INGRESOS = new Set([2,3,7]); // índices de renglones que son ingresos
+const UNI = {agri:"Agricultura", cria:"Cría", tambo:"Tambo", rep:"A repartir", duda:"Duda", fuera:"Fuera"};
+const PRESU = {agri:2000, cria:18500, tambo:19800}; // margen bruto presupuestado, USD
+const REPARTO = {agri:.6, cria:.2, tambo:.2};
+const COLOR = {agri:"var(--trigo)", cria:"var(--azul)", tambo:"var(--verde)"};
+let vet = null; // cria | tambo | mitad
+const usd = n => "USD " + Math.round(n).toLocaleString("es-AR");
+const kusd = n => (n/1000).toLocaleString("es-AR",{maximumFractionDigits:1}) + " mil";
+
+// navegación
+const pantallas = [...document.querySelectorAll(".pantalla")];
+const pasos = document.getElementById("pasos");
+pantallas.forEach((p,i) => {
+  const li = document.createElement("li");
+  li.innerHTML = `<button type="button" data-ir="${i}"><span class="n">${String(i).padStart(2,"0")}</span>${p.dataset.titulo}</button>`;
+  pasos.appendChild(li);
+});
+let procesado = false;
+function ir(i){
+  pantallas.forEach((p,k) => p.classList.toggle("activa", k===i));
+  pasos.querySelectorAll("button").forEach((b,k) => { if(k===i){ b.setAttribute("aria-current","step"); b.scrollIntoView({block:"nearest",inline:"nearest"}); } else b.removeAttribute("aria-current"); });
+  document.getElementById("escena").scrollTop = 0;
+  if(i===2 && !procesado) procesar();
+  if(i===3) tablero();
+  try{ history.replaceState(null,"","#"+i); }catch(e){}
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-ir]"); if(b) ir(+b.dataset.ir); });
+
+// 1 · planilla cruda
+document.getElementById("tCruda").innerHTML = DATOS.map((d,i) =>
+  `<tr><td class="n">${i+1}</td><td>${d.cruda}</td><td>${d.prob.length ? d.prob.map(p=>`<span class="problema">${p}</span>`).join("") : '<span class="nota">—</span>'}</td></tr>`).join("");
+
+// 2 · ordenar
+function filaLimpia(d,i){
+  let u = d.u;
+  if(d.vet && vet) u = vet==="mitad" ? "rep" : vet;
+  const etiqueta = d.vet && vet==="mitad" ? "Cría + Tambo" : UNI[u];
+  const nota = d.vet && vet ? "Resuelto por el analista" : d.nota;
+  const signo = INGRESOS.has(i) ? "+" : (d.usd ? "−" : "");
+  return `<td class="mono">${i+1}</td><td class="mono">${d.f}</td><td>${d.c}</td><td><span class="chip u-${d.vet && !vet ? "duda" : u}">${etiqueta}</span></td><td class="der mono">${d.q}</td><td class="der mono ${INGRESOS.has(i)?"pos":""}">${d.usd ? signo + Math.round(d.usd).toLocaleString("es-AR") : "—"}</td><td class="nota">${d.alerta ? '<span class="problema">stock</span> ' : ""}${nota}</td>`;
+}
+let timer = null;
+function procesar(){
+  procesado = true;
+  const tb = document.getElementById("tLimpia");
+  tb.innerHTML = "";
+  clearInterval(timer);
+  let i = 0;
+  const cont = {ok:0, ajuste:0, duda:0};
+  const pinta = () => { document.getElementById("cOk").textContent = cont.ok; document.getElementById("cAj").textContent = cont.ajuste; document.getElementById("cDu").textContent = vet ? 0 : cont.duda; };
+  pinta();
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const paso = () => {
+    if(i >= DATOS.length){ clearInterval(timer); return; }
+    const tr = document.createElement("tr");
+    tr.className = "fila-nueva"; tr.dataset.i = i;
+    tr.innerHTML = filaLimpia(DATOS[i], i);
+    tb.appendChild(tr);
+    cont[DATOS[i].e]++; pinta(); i++;
+  };
+  if(reduce){ while(i < DATOS.length) paso(); } else timer = setInterval(paso, 140);
+}
+document.getElementById("btnProcesar").addEventListener("click", procesar);
+document.getElementById("opVet").addEventListener("click", e => {
+  const b = e.target.closest("button[data-v]"); if(!b) return;
+  vet = b.dataset.v;
+  document.querySelectorAll("#opVet button").forEach(x => x.setAttribute("aria-pressed", x===b ? "true" : "false"));
+  document.getElementById("vetNota").textContent = vet==="mitad" ? "Listo: USD 300 a cría y USD 300 a tambo." : `Listo: los USD 600 van a ${UNI[vet].toLowerCase()}.`;
+  const fila = document.querySelector('#tLimpia tr[data-i="13"]');
+  if(fila) fila.innerHTML = filaLimpia(DATOS[13], 13);
+  document.getElementById("cDu").textContent = 0;
+});
+
+// 3 · tablero
+function cuentas(){
+  const ing = {agri:0,cria:0,tambo:0}, cos = {agri:0,cria:0,tambo:0};
+  let sinAsignar = 0;
+  DATOS.forEach((d,i) => {
+    if(!d.usd || d.u==="fuera") return;
+    const destino = INGRESOS.has(i) ? ing : cos;
+    let u = d.u;
+    if(d.vet){ if(!vet){ sinAsignar += d.usd; return; } u = vet==="mitad" ? "mitad" : vet; }
+    if(u==="rep") for(const k in REPARTO) destino[k] += d.usd*REPARTO[k];
+    else if(u==="mitad"){ destino.cria += d.usd/2; destino.tambo += d.usd/2; }
+    else destino[u] += d.usd;
+  });
+  const mb = {}; for(const k in ing) mb[k] = ing[k]-cos[k];
+  return {ing, cos, mb, sinAsignar};
+}
+function tablero(){
+  const {ing, cos, mb, sinAsignar} = cuentas();
+  const total = mb.agri+mb.cria+mb.tambo - sinAsignar;
+  const presuT = PRESU.agri+PRESU.cria+PRESU.tambo;
+  const dif = (a,b) => { const p = (a-b)/b*100; if(Math.abs(p)<1) return `<span class="nota">≈ igual al presupuesto (${usd(b)})</span>`; return `<span class="${p>=0?"pos":"neg"}">${p>=0?"▲":"▼"} ${Math.abs(p).toFixed(0)} % contra presupuesto</span>`; };
+  const litros = 61200, litrosPresu = 64000;
+  document.getElementById("kpis").innerHTML = `
+    <div class="kpi"><div class="et">Margen bruto del mes</div><div class="v">${usd(total)}</div><div class="d">${dif(total,presuT)}</div></div>
+    <div class="kpi"><div class="et"><span class="punto" style="background:${COLOR.cria}"></span>Cría</div><div class="v">${usd(mb.cria)}</div><div class="d">${dif(mb.cria,PRESU.cria)}</div></div>
+    <div class="kpi"><div class="et"><span class="punto" style="background:${COLOR.tambo}"></span>Tambo</div><div class="v">${usd(mb.tambo)}</div><div class="d">${dif(mb.tambo,PRESU.tambo)}<br><span class="nota">${(mb.tambo/litros).toFixed(2).replace(".",",")} USD de margen por litro</span></div></div>
+    <div class="kpi"><div class="et"><span class="punto" style="background:${COLOR.agri}"></span>Agricultura</div><div class="v">${usd(mb.agri)}</div><div class="d">${dif(mb.agri,PRESU.agri)}</div></div>`;
+  const max = Math.max(...Object.values(mb), ...Object.values(PRESU))*1.1;
+  document.getElementById("barras").innerHTML = ["cria","tambo","agri"].map(k => `
+    <div class="barra-f"><span>${UNI[k]}</span><div class="pista" role="img" aria-label="${UNI[k]}: real ${usd(mb[k])}, presupuesto ${usd(PRESU[k])}"><div class="real" style="width:${Math.max(0,mb[k])/max*100}%;background:${COLOR[k]}"></div><div class="meta" style="left:${PRESU[k]/max*100}%"></div></div><span class="mono der">${usd(mb[k])}</span></div>`).join("")
+    + (sinAsignar ? `<p class="nota">Hay ${usd(sinAsignar)} del veterinario sin asignar: resolvé la duda en el paso anterior.</p>` : "");
+  const al = [
+    {t:"r", h:"Glifosato: se aplicaron 45 L y se remitieron 40", s:"OT 18, lote 4. Falta un remito o la dosis cargada está mal. Sin esto, el stock de insumos no cierra."},
+    {t: mb.tambo < PRESU.tambo ? "r":"v", h:`Tambo ${((mb.tambo-PRESU.tambo)/PRESU.tambo*100).toFixed(0)} % contra presupuesto`, s:`Se remitieron ${litros.toLocaleString("es-AR")} L contra ${litrosPresu.toLocaleString("es-AR")} presupuestados. Revisar vacas en ordeñe y balanceado.`},
+    {t:"a", h:"Remito 0001-4521 cargado dos veces", s:"Se contó una sola vez. Avisar en el campo para que no se repita."},
+    {t:"a", h:"Gasoil sin destino", s:"Se repartió 60 / 20 / 20. Si el campo anota en qué se usa, el margen por unidad gana precisión."},
+    {t:"v", h:`Cría por encima de lo esperado`, s:"Los terneros se vendieron a USD 2,6/kg en el remate de octubre."},
+  ];
+  if(sinAsignar) al.splice(1,0,{t:"r", h:"Una duda sin resolver", s:"Honorarios del veterinario: falta decidir la unidad."});
+  document.getElementById("alertas").innerHTML = al.map(a => `<li><span class="ic ${a.t}">${a.t==="r"?"!":a.t==="a"?"·":"✓"}</span><div>${a.h}<small>${a.s}</small></div></li>`).join("");
+  flujo();
+  const pct = (a,b) => Math.round((a-b)/b*100);
+  const comp = Math.abs(pct(total,presuT)) < 1 ? `prácticamente igual a los ${usd(presuT)} presupuestados` : `${total>presuT?"por encima":"por debajo"} de los ${usd(presuT)} presupuestados`;
+  const tambo = mb.tambo < PRESU.tambo ? `el tambo quedó ${Math.abs(pct(mb.tambo,PRESU.tambo))} % abajo (${litros.toLocaleString("es-AR")} litros contra ${litrosPresu.toLocaleString("es-AR")})` : "el tambo cumplió lo previsto";
+  const agri = mb.agri < PRESU.agri ? ` y la agricultura ${Math.abs(pct(mb.agri,PRESU.agri))} % abajo, sobre todo por la semilla de maíz` : "";
+  const mesMin = ["octubre","noviembre","diciembre","enero","febrero"][flujoMin];
+  document.getElementById("borrador").textContent =
+`Hola, Ramón:
+
+En octubre el campo dejó ${usd(total)} de margen bruto, ${comp}. Lo sostuvo la cría: el remate de terneros dejó ${usd(ing.cria)} y la unidad quedó ${pct(mb.cria,PRESU.cria)} % arriba de lo previsto. En cambio, ${tambo}${agri}.
+
+Para la reunión quiero que veamos dos cosas. Primero, el glifosato del lote 4: se aplicaron 45 litros y hay remitos por 40, así que falta un remito o hay que corregir la orden de trabajo. Segundo, ${mesMin}: con la siembra del maíz, ${minSaldo<0 ? `la caja queda en rojo por ${usd(-minSaldo)}` : `la caja baja a ${usd(minSaldo)}`} y conviene decidir con tiempo cómo lo cubrimos.${sinAsignar ? "\n\n(Falta asignar los honorarios del veterinario.)" : ""}`;
+}
+let minSaldo = 0, flujoMin = 0;
+function flujo(){
+  const meses = ["Oct","Nov","Dic","Ene","Feb"];
+  const mov = [[0,0],[22500,26800],[23000,33500],[22800,14000],[23500,15500]];
+  let s = 9000; const saldos = [];
+  mov.forEach(([i,e]) => { s += i - e; saldos.push(s); });
+  minSaldo = Math.min(...saldos); flujoMin = saldos.indexOf(minSaldo);
+  const W=520,H=270,pl=40,pr=16,pt=16,pb=30;
+  const lo = Math.min(0,...saldos), hi = Math.max(...saldos)*1.15;
+  const x = k => pl + k*(W-pl-pr)/(meses.length-1);
+  const y = v => pt + (hi-v)/(hi-lo)*(H-pt-pb);
+  const pts = saldos.map((v,k)=>`${x(k)},${y(v)}`).join(" ");
+  const k0 = saldos.indexOf(minSaldo);
+  document.getElementById("flujo").innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Saldo de caja proyectado: llega a ${usd(minSaldo)} en diciembre">
+    <line x1="${pl}" x2="${W-pr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--linea)"/>
+    ${[-5000,0,5000,10000].map(v=>`<text x="${pl-6}" y="${y(v)+4}" text-anchor="end">${v/1000}</text>`).join("")}
+    <polyline points="${pts}" fill="none" stroke="var(--verde)" stroke-width="2.5" stroke-linejoin="round"/>
+    ${saldos.map((v,k)=>`<circle cx="${x(k)}" cy="${y(v)}" r="${k===k0?6:3.5}" fill="${k===k0?"var(--rojo)":"var(--verde)"}"/><text x="${x(k)}" y="${H-6}" text-anchor="middle">${meses[k]}</text>`).join("")}
+    <text x="${x(k0)+12}" y="${y(minSaldo)+4}" text-anchor="start" style="fill:var(--rojo);font-weight:500">${kusd(minSaldo)}</text>
+  </svg><p class="nota" style="margin-top:8px">En ${["octubre","noviembre","diciembre","enero","febrero"][k0]} se juntan la siembra del maíz y los fletes. Con este dato, la decisión de financiar se toma un mes antes y no el día que falta la plata.</p>`;
+}
+document.getElementById("btnCopiar").addEventListener("click", async e => {
+  try{ await navigator.clipboard.writeText(document.getElementById("borrador").textContent); e.target.textContent = "Copiado"; }
+  catch(err){ e.target.textContent = "No se pudo copiar"; }
+  setTimeout(()=> e.target.textContent = "Copiar", 1600);
+});
+
+// pantalla completa
+const btnPC = document.getElementById("btnPC");
+btnPC.addEventListener("click", () => { if(!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(()=>{}); else document.exitFullscreen?.(); });
+document.addEventListener("fullscreenchange", () => btnPC.textContent = document.fullscreenElement ? "⛶ Salir de pantalla completa" : "⛶ Pantalla completa");
+
+const inicial = parseInt(location.hash.slice(1),10);
+ir(Number.isInteger(inicial) && inicial>=0 && inicial<pantallas.length ? inicial : 0);
+</script>
+</body>
+</html>
